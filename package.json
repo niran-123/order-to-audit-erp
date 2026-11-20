@@ -1,0 +1,37 @@
+{
+  "name": "order-to-audit-erp",
+  "version": "1.0.0",
+  "description": "Enterprise Order-to-Audit Manufacturing ERP Monorepo",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "prisma:generate": "npm run prisma:generate --workspace=backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:seed": "npm run prisma:seed --workspace=backend",
+    "test:db-integrity": "node --experimental-strip-types tests/database-integrity.ts",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "keywords": [
+    "manufacturing",
+    "erp",
+    "monorepo",
+    "react",
+    "vite",
+    "express",
+    "postgresql",
+    "prisma"
+  ],
+  "author": "NIT Intern Project",
+  "license": "ISC"
+}
