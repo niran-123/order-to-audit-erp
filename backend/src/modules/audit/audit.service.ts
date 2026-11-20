@@ -1,4 +1,4 @@
-import { prisma } from '../../services/prisma';
+import { prisma, isPostgresPortListening } from '../../services/prisma';
 import { AuditAction } from '@prisma/client';
 
 export interface SecurityAuditParams {
@@ -16,12 +16,19 @@ export const auditLogs: SecurityAuditParams[] = [];
 
 /**
  * Persists an immutable security/system audit event.
- * Fails gracefully so an audit failure does not crash the request flow.
+ * Non-blocking in-memory capture with background DB sync when PostgreSQL is online.
  */
 export async function recordSecurityAudit(params: SecurityAuditParams): Promise<void> {
   auditLogs.push(params);
-  try {
-    await prisma.auditLog.create({
+
+  const isDbLive = await isPostgresPortListening('127.0.0.1', 5432, 50);
+  if (!isDbLive) {
+    return;
+  }
+
+  // Fire-and-forget DB persistence so client response is not delayed
+  prisma.auditLog
+    .create({
       data: {
         userId: params.userId,
         entityName: params.entityName,
@@ -32,8 +39,6 @@ export async function recordSecurityAudit(params: SecurityAuditParams): Promise<
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
       },
-    });
-  } catch (error) {
-    // Graceful fallback for test/dev environments without active database connection
-  }
+    })
+    .catch(() => {});
 }

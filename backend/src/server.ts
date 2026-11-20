@@ -4,7 +4,7 @@ import { checkDatabaseConnection } from './services/prisma';
 
 const app = createApp();
 
-const server = app.listen(env.PORT, async () => {
+const server = app.listen(env.PORT, '0.0.0.0', async () => {
   console.log(`[ERP-BACKEND] Server initialized in ${env.NODE_ENV} mode.`);
   console.log(`[ERP-BACKEND] Listening on port: ${env.PORT} -> http://localhost:${env.PORT}`);
 

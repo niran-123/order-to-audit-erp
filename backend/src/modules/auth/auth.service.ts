@@ -1,4 +1,4 @@
-import { prisma } from '../../services/prisma';
+import { prisma, isPostgresPortListening } from '../../services/prisma';
 import {
   comparePassword,
   generateAccessToken,
@@ -166,30 +166,19 @@ export async function authenticateUser(
   const normalizedEmail = email.trim().toLowerCase();
 
   let user: any = null;
-  try {
-    user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-      include: {
-        userRoles: {
-          include: { role: true },
+  const isDbLive = await isPostgresPortListening('127.0.0.1', 5432, 100);
+  if (isDbLive) {
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        include: {
+          userRoles: {
+            include: { role: true },
+          },
         },
-      },
-    });
-  } catch (dbError) {
-    // PostgreSQL connection not ready; resolve from benchmark store
-    const benchUser = BENCHMARK_USERS[normalizedEmail];
-    if (benchUser) {
-      user = {
-        id: benchUser.id,
-        email: benchUser.email,
-        passwordHash: benchUser.passwordHash,
-        plainPassword: benchUser.plainPassword,
-        firstName: benchUser.firstName,
-        lastName: benchUser.lastName,
-        phone: benchUser.phone,
-        isActive: benchUser.isActive,
-        userRoles: benchUser.roles.map((r) => ({ role: { name: r } })),
-      };
+      });
+    } catch (dbError) {
+      // PostgreSQL connection not ready; resolve from benchmark store
     }
   }
 
@@ -293,24 +282,26 @@ export async function authenticateUser(
     expiresAt,
   });
 
-  try {
-    await prisma.refreshToken.create({
-      data: {
-        token: refreshTokenString,
-        userId: user.id,
-        expiresAt,
-        ipAddress,
-        userAgent,
-      },
-    });
+  if (isDbLive) {
+    try {
+      await prisma.refreshToken.create({
+        data: {
+          token: refreshTokenString,
+          userId: user.id,
+          expiresAt,
+          ipAddress,
+          userAgent,
+        },
+      });
 
-    // Update user last login timestamp
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-  } catch (err) {
-    // Non-blocking fallback for memory-mode execution
+      // Update user last login timestamp
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+    } catch (err) {
+      // Non-blocking fallback for memory-mode execution
+    }
   }
 
   // Record successful login audit log
@@ -352,21 +343,24 @@ export async function rotateRefreshToken(
   userAgent?: string,
 ): Promise<{ accessToken: string; refreshToken: string }> {
   let tokenRecord: any = null;
-  try {
-    tokenRecord = await prisma.refreshToken.findUnique({
-      where: { token: oldRefreshToken },
-      include: {
-        user: {
-          include: {
-            userRoles: {
-              include: { role: true },
+  const isDbLive = await isPostgresPortListening('127.0.0.1', 5432, 100);
+  if (isDbLive) {
+    try {
+      tokenRecord = await prisma.refreshToken.findUnique({
+        where: { token: oldRefreshToken },
+        include: {
+          user: {
+            include: {
+              userRoles: {
+                include: { role: true },
+              },
             },
           },
         },
-      },
-    });
-  } catch (err) {
-    // DB not available; check fallback tokens
+      });
+    } catch (err) {
+      // DB not available; check fallback tokens
+    }
   }
 
   // Fallback to in-memory refresh token if DB is offline
