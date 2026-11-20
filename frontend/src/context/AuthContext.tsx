@@ -11,6 +11,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ redirectUrl: string }>;
+  switchRole: (email: string) => Promise<{ redirectUrl: string }>;
   logout: () => Promise<void>;
   hasRole: (roles: SystemRole | SystemRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -71,6 +72,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { redirectUrl: redirectUrl || '/' };
   };
 
+  const switchRole = async (email: string) => {
+    return login(email, 'DemoPass@2026');
+  };
+
   const logout = async () => {
     try {
       const refreshToken = localStorage.getItem('erp_refresh_token');
@@ -112,6 +117,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         isLoading,
         login,
+        switchRole,
         logout,
         hasRole,
         hasPermission,
